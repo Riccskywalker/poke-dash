@@ -155,8 +155,8 @@ footer a { color: white; }
   .hero-copy > p:last-child { max-width: 500px; }
   .game-frame { padding: 7px; border-radius: 13px; }
   .frame-topbar { min-height: 39px; }
-  .canvas-wrap { min-height: 390px; }
-  canvas { width: auto; max-width: none; height: 390px; }
+  .canvas-wrap { min-height: 250px; }
+  canvas { width: auto; max-width: none; height: 250px; }
   .canvas-wrap:has(#start-overlay:not(.hidden)) { min-height: 500px; }
   .canvas-wrap:has(#start-overlay:not(.hidden)) canvas { height: 500px; }
   .game-hud { inset: 11px 11px auto; }
