@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
 
-test('usa un solo Pokémon e parte con spazio', async ({ page }) => {
+test('uses one Pokémon and starts with space', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Pika Runner', exact: true })).toBeVisible();
-  await expect(page.getByText(/Pikachu, una strada infinita/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Mew Runner', exact: true })).toBeVisible();
+  await expect(page.getByText(/Mew, one endless road/)).toBeVisible();
+  await expect(page.getByText('Pikachu')).toHaveCount(0);
   await expect(page.getByText('Bulbasaur')).toHaveCount(0);
   await expect(page.getByText('Charmander')).toHaveCount(0);
 
@@ -14,21 +15,21 @@ test('usa un solo Pokémon e parte con spazio', async ({ page }) => {
   await expect(canvas).toHaveAttribute('data-player-state', 'jumping');
 });
 
-test('il controllo touch avvia e fa saltare', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'mobile', 'Il pulsante è riservato al layout touch');
+test('touch control starts the game and jumps', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'The button is only visible in the touch layout');
   await page.goto('/');
-  const button = page.getByRole('button', { name: 'Salta' });
+  const button = page.getByRole('button', { name: 'Jump' });
   await expect(button).toBeVisible();
   await button.dispatchEvent('pointerdown');
-  await expect(page.getByTestId('game-canvas')).toHaveAttribute('data-player-state', 'jumping');
+  await expect(page.getByTestId('game-canvas')).toHaveAttribute('data-jumps', '1');
 });
 
-test('registra il game over e permette di riprovare', async ({ page }) => {
+test('records game over and allows retrying', async ({ page }) => {
   await page.goto('/');
   const canvas = page.getByTestId('game-canvas');
   await page.keyboard.press('Space');
   await expect(canvas).toHaveAttribute('data-phase', 'gameover', { timeout: 8_000 });
-  await expect(page.getByText('Nessun record')).toHaveCount(0);
+  await expect(page.getByText('No runs yet')).toHaveCount(0);
   await page.keyboard.press('Space');
   await expect(canvas).toHaveAttribute('data-phase', 'running');
   await expect(canvas).toHaveAttribute('data-player-state', 'jumping');

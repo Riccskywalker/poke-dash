@@ -1,31 +1,31 @@
-# Pika Runner
+# Mew Runner
 
-Un endless runner minimale per browser, ispirato all'immediatezza del Chrome Dino. Un solo Pokémon, un solo comando: salta gli ostacoli e supera il record locale.
+A minimalist browser endless runner inspired by the immediacy of Chrome Dino. One Pokémon and one control: jump over obstacles and beat your local high score.
 
-Lo sprite pixel di Pikachu è originale e costruito manualmente nel codice come blocchi su una griglia 28×23. Anche ostacoli, nuvole e terreno sono disegnati dal canvas: il gioco non carica asset grafici esterni.
+Mew's pixel sprite is an original project asset. Obstacles, clouds and terrain are also drawn directly on the canvas, so the game does not load external graphics.
 
-## Sviluppo
+## Development
 
-Richiede Node.js 22.
+Requires Node.js 22.
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Verifiche:
+Run all checks:
 
 ```bash
 npm run check
 npm run test:e2e
 ```
 
-## Comandi
+## Controls
 
-- `Spazio` o `↑`: inizia, salta e riprova
-- click/tap sul canvas: salta
-- pulsante `SALTA`: controllo mobile
+- `Space` or `↑`: start, jump and retry
+- Click or tap the canvas: jump
+- `JUMP` button: mobile control
 
-## Note legali
+## Legal notice
 
-Progetto fan-made non commerciale e non ufficiale. Pokémon e i relativi personaggi appartengono ai rispettivi titolari.
+This is an unofficial, non-commercial fan project. Pokémon and its characters belong to their respective owners.

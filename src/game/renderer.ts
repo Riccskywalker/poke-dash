@@ -1,5 +1,5 @@
 import { WORLD } from './engine';
-import { drawPixelPikachu } from './sprite';
+import { drawPixelMew } from './sprite';
 import type { GameState, Obstacle } from './types';
 
 const INK = '#535353';
@@ -26,13 +26,13 @@ export class GameRenderer {
 
     const runFrame = state.player.grounded && state.phase === 'running' ? Math.floor(state.elapsedMs / 115) % 2 : 0;
     const idleBob = state.phase === 'idle' ? Math.sin(state.elapsedMs / 250) * 1 : 0;
-    drawPixelPikachu(ctx, state.player.x, state.player.y + idleBob, runFrame, 2);
+    drawPixelMew(ctx, state.player.x, state.player.y + idleBob, runFrame, 2);
 
     this.drawScore(state.score, highScore);
-    if (state.phase === 'idle') this.centerText('PREMI SPAZIO PER GIOCARE', 116, 13);
+    if (state.phase === 'idle') this.centerText('PRESS SPACE TO PLAY', 116, 13);
     if (state.phase === 'gameover') {
       this.centerText('GAME OVER', 91, 19);
-      this.centerText('SPAZIO PER RIPROVARE', 119, 12);
+      this.centerText('SPACE TO RETRY', 119, 12);
       this.drawRestartIcon(WORLD.width / 2 + 71, 81);
     }
   }
