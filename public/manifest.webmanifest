@@ -1,7 +1,7 @@
 {
-  "name": "Pika Runner",
-  "short_name": "Pika Runner",
-  "description": "Un runner pixel minimale con un solo Pokémon.",
+  "name": "Mew Runner",
+  "short_name": "Mew Runner",
+  "description": "A minimalist pixel runner starring one Pokémon.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fafafa",

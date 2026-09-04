@@ -31,7 +31,7 @@ function dimensions(kind: ObstacleKind): Pick<Rect, 'width' | 'height' | 'y'> {
   return { width: 34, height: 31, y: WORLD.groundY - 31 };
 }
 
-export class PikaRunnerEngine {
+export class MewRunnerEngine {
   public state: GameState;
   private nextSpawnMs = 1250;
   private nextId = 1;

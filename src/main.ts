@@ -1,14 +1,14 @@
 import './style.css';
-import { PikaRunnerEngine } from './game/engine';
+import { MewRunnerEngine } from './game/engine';
 import { GameRenderer } from './game/renderer';
-import { drawPixelPikachu } from './game/sprite';
+import { drawPixelMew } from './game/sprite';
 
 interface RunRecord {
   score: number;
   date: string;
 }
 
-const STORAGE_KEY = 'pika-runner-records-v1';
+const STORAGE_KEY = 'mew-runner-records-v1';
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <main class="page">
@@ -17,46 +17,47 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
         <canvas id="sprite-preview" width="92" height="92"></canvas>
       </div>
       <div>
-        <h1>Pika Runner</h1>
+        <h1>Mew Runner</h1>
         <p>
-          Pikachu, una strada infinita. Premi <strong>spazio</strong> o tocca il gioco per saltare.
-          Evita rocce, erba alta e Poké Ball. Prova a battere il tuo record.
+          Mew, one endless road. Press <strong>space</strong> or tap the game to jump.
+          Dodge rocks, tall grass and Poké Balls. Beat your high score.
         </p>
       </div>
     </header>
 
     <section class="game-section" aria-labelledby="game-title">
-      <h2 id="game-title" class="visually-hidden">Gioco Pika Runner</h2>
+      <h2 id="game-title" class="visually-hidden">Mew Runner game</h2>
       <canvas
         id="game-canvas"
         data-testid="game-canvas"
         data-phase="idle"
         data-player-state="grounded"
+        data-jumps="0"
         width="900"
         height="260"
-        aria-label="Pika Runner: premi spazio o tocca per saltare"
+        aria-label="Mew Runner: press space or tap to jump"
       ></canvas>
-      <button id="jump-button" class="jump-button" type="button" aria-label="Salta">
-        <span>↑</span> SALTA
+      <button id="jump-button" class="jump-button" type="button" aria-label="Jump">
+        <span>↑</span> JUMP
       </button>
-      <p id="game-status" class="status" role="status" aria-live="polite">Premi spazio per iniziare.</p>
+      <p id="game-status" class="status" role="status" aria-live="polite">Press space to start.</p>
     </section>
 
     <section class="scores" aria-labelledby="scores-title">
-      <h2 id="scores-title">Migliori corse</h2>
+      <h2 id="scores-title">Best runs</h2>
       <ol id="score-list"></ol>
     </section>
 
     <footer>
-      <p>Fan game non ufficiale. Pokémon appartiene ai rispettivi titolari.</p>
-      <a href="https://github.com/Riccskywalker/poke-dash">Codice sorgente</a>
+      <p>Unofficial fan game. Pokémon belongs to its respective owners.</p>
+      <a href="https://github.com/Riccskywalker/poke-dash">Source code</a>
     </footer>
   </main>
 `;
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
 const renderer = new GameRenderer(canvas);
-const engine = new PikaRunnerEngine();
+const engine = new MewRunnerEngine();
 const status = document.querySelector<HTMLParagraphElement>('#game-status')!;
 const jumpButton = document.querySelector<HTMLButtonElement>('#jump-button')!;
 let lastFrame = performance.now();
@@ -85,20 +86,24 @@ function renderRecords(): void {
   const list = document.querySelector<HTMLOListElement>('#score-list')!;
   const entries = records();
   if (entries.length === 0) {
-    list.innerHTML = '<li><span>1</span><strong>Nessun record</strong><b>00000</b></li>';
+    list.innerHTML = '<li><span>1</span><strong>No runs yet</strong><b>00000</b></li>';
     return;
   }
   list.innerHTML = entries
-    .map((entry, index) => `<li><span>${index + 1}</span><strong>Corsa ${index + 1}</strong><b>${String(entry.score).padStart(5, '0')}</b></li>`)
+    .map((entry, index) => `<li><span>${index + 1}</span><strong>Run ${index + 1}</strong><b>${String(entry.score).padStart(5, '0')}</b></li>`)
     .join('');
 }
 
 function jump(): void {
   if (engine.state.phase === 'gameover') {
     engine.reset();
-    status.textContent = 'Nuova corsa.';
+    status.textContent = 'New run.';
   }
-  if (engine.jump()) status.textContent = 'Pikachu è in corsa.';
+  if (engine.jump()) {
+    canvas.dataset.jumps = String(Number(canvas.dataset.jumps ?? 0) + 1);
+    canvas.dataset.playerState = 'jumping';
+    status.textContent = 'Mew is running.';
+  }
   lastFrame = performance.now();
 }
 
@@ -109,14 +114,14 @@ function loop(now: number): void {
   for (const event of engine.drainEvents()) {
     if (event.type === 'gameover') {
       saveScore(event.score);
-      status.textContent = `Game over. ${event.score} punti.`;
+      status.textContent = `Game over. ${event.score} points.`;
     }
   }
 
   renderer.draw(engine.state, highScore());
   canvas.dataset.phase = engine.state.phase;
   canvas.dataset.playerState = engine.state.player.grounded ? 'grounded' : 'jumping';
-  jumpButton.textContent = engine.state.phase === 'gameover' ? '↻ RIPROVA' : '↑ SALTA';
+  jumpButton.textContent = engine.state.phase === 'gameover' ? '↻ RETRY' : '↑ JUMP';
   requestAnimationFrame(loop);
 }
 
@@ -136,7 +141,7 @@ previewContext.fillStyle = '#fafafa';
 previewContext.fillRect(0, 0, preview.width, preview.height);
 previewContext.fillStyle = '#535353';
 previewContext.fillRect(0, 70, preview.width, 2);
-drawPixelPikachu(previewContext, 17, 21, 0, 2);
+drawPixelMew(previewContext, 17, 21, 0, 2);
 
 renderRecords();
 renderer.draw(engine.state, highScore());

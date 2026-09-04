@@ -1,5 +1,5 @@
-# Attribuzioni
+# Attribution
 
-Pika Runner è un progetto fan-made, non commerciale e non ufficiale. Non è affiliato, approvato o sponsorizzato da Nintendo, Game Freak o The Pokémon Company.
+Mew Runner is an unofficial, non-commercial fan project. It is not affiliated with, endorsed or sponsored by Nintendo, Game Freak or The Pokémon Company.
 
-Pokémon e Pikachu appartengono ai rispettivi titolari. Lo sprite pixel usato nel gioco è una reinterpretazione originale costruita manualmente nel codice, senza importare immagini o sprite esterni.
+Pokémon and Mew belong to their respective owners. The pixel sprite used by the game is an original project asset; no third-party Pokémon sprite files are bundled.
