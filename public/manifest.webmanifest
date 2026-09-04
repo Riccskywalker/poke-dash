@@ -1,0 +1,10 @@
+{
+  "name": "PokéRun — Endless Runner",
+  "short_name": "PokéRun",
+  "description": "Un endless runner fan-made a tema Pokémon.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f0dc",
+  "theme_color": "#13213c",
+  "icons": []
+}
