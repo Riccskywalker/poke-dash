@@ -1,187 +1,139 @@
 import { WORLD } from './engine';
-import type { BiomeId, EntityKind, GameState, StarterId } from './types';
+import { drawPixelPikachu } from './sprite';
+import type { GameState, Obstacle } from './types';
 
-const STARTER_SPRITES: Record<StarterId, string> = {
-  bulbasaur: '/assets/pokemon/1.gif',
-  charmander: '/assets/pokemon/4.gif',
-  squirtle: '/assets/pokemon/7.gif',
-  pikachu: '/assets/pokemon/25.gif',
-};
-
-const ENTITY_SPRITES: Record<EntityKind, string> = {
-  zubat: '/assets/pokemon/41.gif',
-  diglett: '/assets/pokemon/50.gif',
-  gastly: '/assets/pokemon/92.gif',
-  voltorb: '/assets/pokemon/100.gif',
-  oran: '/assets/items/oran-berry.png',
-  sitrus: '/assets/items/sitrus-berry.png',
-};
-
-const BIOME_TINTS: Record<BiomeId, string> = {
-  route: 'rgba(255, 238, 144, .04)',
-  forest: 'rgba(14, 92, 68, .22)',
-  cave: 'rgba(72, 53, 100, .36)',
-  night: 'rgba(15, 27, 70, .52)',
-};
-
-const BIOME_GROUNDS: Record<BiomeId, [string, string]> = {
-  route: ['#67a63a', '#31552f'],
-  forest: ['#3f7b43', '#1f4738'],
-  cave: ['#665c69', '#343148'],
-  night: ['#31506a', '#162a45'],
-};
-
-function loadImage(source: string): HTMLImageElement {
-  const image = new Image();
-  image.src = source;
-  return image;
-}
+const INK = '#535353';
+const LIGHT = '#d5d5d5';
+const PAPER = '#fafafa';
 
 export class GameRenderer {
   private readonly context: CanvasRenderingContext2D;
-  private readonly background = loadImage('/assets/generated/route-panorama.png');
-  private readonly starters = Object.fromEntries(
-    Object.entries(STARTER_SPRITES).map(([key, value]) => [key, loadImage(value)]),
-  ) as Record<StarterId, HTMLImageElement>;
-  private readonly entities = Object.fromEntries(
-    Object.entries(ENTITY_SPRITES).map(([key, value]) => [key, loadImage(value)]),
-  ) as Record<EntityKind, HTMLImageElement>;
 
   constructor(canvas: HTMLCanvasElement) {
     const context = canvas.getContext('2d');
     if (!context) throw new Error('Canvas 2D non supportato');
-    this.context = context;
     context.imageSmoothingEnabled = false;
+    this.context = context;
   }
 
-  draw(state: GameState): void {
+  draw(state: GameState, highScore: number): void {
     const ctx = this.context;
-    ctx.clearRect(0, 0, WORLD.width, WORLD.height);
-    this.drawBackground(state);
-    this.drawWeather(state);
-    this.drawGround(state);
-    this.drawEntities(state);
-    this.drawPlayer(state);
-    if (state.phase === 'paused') this.drawPausedShade();
+    ctx.fillStyle = PAPER;
+    ctx.fillRect(0, 0, WORLD.width, WORLD.height);
+    this.drawClouds(state.distance);
+    this.drawGround(state.distance);
+    state.obstacles.forEach((obstacle) => this.drawObstacle(obstacle));
+
+    const runFrame = state.player.grounded && state.phase === 'running' ? Math.floor(state.elapsedMs / 115) % 2 : 0;
+    const idleBob = state.phase === 'idle' ? Math.sin(state.elapsedMs / 250) * 1 : 0;
+    drawPixelPikachu(ctx, state.player.x, state.player.y + idleBob, runFrame, 2);
+
+    this.drawScore(state.score, highScore);
+    if (state.phase === 'idle') this.centerText('PREMI SPAZIO PER GIOCARE', 116, 13);
+    if (state.phase === 'gameover') {
+      this.centerText('GAME OVER', 91, 19);
+      this.centerText('SPAZIO PER RIPROVARE', 119, 12);
+      this.drawRestartIcon(WORLD.width / 2 + 71, 81);
+    }
   }
 
-  private drawBackground(state: GameState): void {
+  private drawScore(score: number, highScore: number): void {
     const ctx = this.context;
-    ctx.fillStyle = '#75d2e8';
-    ctx.fillRect(0, 0, WORLD.width, WORLD.groundY);
-
-    if (this.background.complete) {
-      const height = WORLD.groundY;
-      const width = height * (this.background.naturalWidth / this.background.naturalHeight);
-      const offset = -((state.distance * 0.08) % width);
-      for (let x = offset - width; x < WORLD.width + width; x += width) {
-        ctx.drawImage(this.background, x, 0, width, height);
-      }
-    }
-
-    ctx.fillStyle = BIOME_TINTS[state.biome];
-    ctx.fillRect(0, 0, WORLD.width, WORLD.groundY);
-
-    const sunX = WORLD.width - 105 - ((state.distance * 0.012) % (WORLD.width + 220));
-    ctx.globalAlpha = state.biome === 'night' ? 0.25 : 0.5;
-    ctx.fillStyle = state.biome === 'night' ? '#e8f1ff' : '#fff4b0';
-    ctx.beginPath();
-    ctx.arc(sunX, 74, state.biome === 'night' ? 23 : 31, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
+    ctx.fillStyle = INK;
+    ctx.font = 'bold 14px "Courier New", monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillText(`HI ${String(highScore).padStart(5, '0')}  ${String(score).padStart(5, '0')}`, WORLD.width - 13, 13);
   }
 
-  private drawWeather(state: GameState): void {
+  private centerText(text: string, y: number, size: number): void {
     const ctx = this.context;
-    if (state.biome === 'forest') {
-      ctx.strokeStyle = 'rgba(220, 249, 255, .45)';
-      ctx.lineWidth = 2;
-      for (let index = 0; index < 28; index += 1) {
-        const x = (index * 83 + state.distance * 0.55) % (WORLD.width + 40) - 20;
-        const y = (index * 47 + state.elapsedMs * 0.16) % WORLD.groundY;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x - 5, y + 13);
-        ctx.stroke();
-      }
-    }
-    if (state.biome === 'night') {
-      ctx.fillStyle = 'rgba(255,255,205,.75)';
-      for (let index = 0; index < 24; index += 1) {
-        const x = (index * 137 + 41) % WORLD.width;
-        const y = (index * 61 + 20) % 230;
-        const pulse = 1.2 + Math.sin(state.elapsedMs / 320 + index) * 0.7;
-        ctx.fillRect(x, y, pulse, pulse);
-      }
-    }
+    ctx.fillStyle = INK;
+    ctx.font = `bold ${size}px "Courier New", monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(text, WORLD.width / 2, y);
   }
 
-  private drawGround(state: GameState): void {
+  private drawClouds(distance: number): void {
     const ctx = this.context;
-    const [top, bottom] = BIOME_GROUNDS[state.biome];
-    ctx.fillStyle = top;
-    ctx.fillRect(0, WORLD.groundY, WORLD.width, 18);
-    ctx.fillStyle = bottom;
-    ctx.fillRect(0, WORLD.groundY + 18, WORLD.width, WORLD.height - WORLD.groundY - 18);
-
-    const offset = -((state.distance * 0.95) % 62);
-    for (let x = offset - 62; x < WORLD.width + 62; x += 62) {
-      ctx.fillStyle = 'rgba(255,255,255,.13)';
-      ctx.fillRect(x + 8, WORLD.groundY + 27, 31, 5);
-      ctx.fillStyle = 'rgba(0,0,0,.13)';
-      ctx.fillRect(x + 38, WORLD.groundY + 57, 18, 5);
+    const offset = -((distance * 0.12) % 330);
+    ctx.fillStyle = LIGHT;
+    for (let index = -1; index < 4; index += 1) {
+      const x = offset + index * 330 + 180;
+      const y = 45 + (index % 2) * 27;
+      ctx.fillRect(x, y + 5, 42, 3);
+      ctx.fillRect(x + 8, y, 15, 3);
+      ctx.fillRect(x + 25, y + 2, 11, 3);
+      ctx.fillRect(x + 3, y + 8, 52, 2);
     }
-    ctx.fillStyle = 'rgba(15,30,35,.32)';
-    ctx.fillRect(0, WORLD.groundY - 3, WORLD.width, 4);
   }
 
-  private drawEntities(state: GameState): void {
+  private drawGround(distance: number): void {
     const ctx = this.context;
-    for (const entity of state.entities) {
-      const image = this.entities[entity.kind];
-      const isBerry = entity.kind === 'oran' || entity.kind === 'sitrus';
-      if (isBerry) {
-        const bob = Math.sin(state.elapsedMs / 180 + entity.id) * 7;
-        ctx.save();
-        ctx.shadowColor = entity.kind === 'sitrus' ? '#ffd93d' : '#6fc7ff';
-        ctx.shadowBlur = 12;
-        ctx.drawImage(image, entity.x, entity.y + bob, entity.width, entity.height);
-        ctx.restore();
-      } else {
-        ctx.drawImage(image, entity.x, entity.y, entity.width, entity.height);
-      }
+    ctx.fillStyle = INK;
+    ctx.fillRect(0, WORLD.groundY, WORLD.width, 2);
+    const offset = -(distance % 90);
+    for (let x = offset - 90; x < WORLD.width + 90; x += 90) {
+      ctx.fillRect(x + 14, WORLD.groundY + 10, 20, 2);
+      ctx.fillRect(x + 51, WORLD.groundY + 22, 8, 2);
+      ctx.fillRect(x + 70, WORLD.groundY + 14, 3, 2);
     }
   }
 
-  private drawPlayer(state: GameState): void {
+  private drawObstacle(obstacle: Obstacle): void {
+    if (obstacle.kind === 'ball') this.drawBall(obstacle.x, obstacle.y);
+    else if (obstacle.kind === 'grass') this.drawGrass(obstacle.x, obstacle.y);
+    else this.drawRock(obstacle.x, obstacle.y);
+  }
+
+  private drawRock(x: number, y: number): void {
     const ctx = this.context;
-    const player = state.player;
-    const blinking = state.elapsedMs < player.invincibleUntil && Math.floor(state.elapsedMs / 90) % 2 === 0;
-    if (blinking) return;
-
-    const bob = player.grounded && !player.ducking && state.phase === 'running' ? Math.sin(state.elapsedMs / 70) * 2 : 0;
-    const special = state.elapsedMs < state.specialUntil;
-    ctx.save();
-    if (special) {
-      ctx.shadowColor = '#ffe66d';
-      ctx.shadowBlur = 25;
-      ctx.fillStyle = 'rgba(255,230,92,.2)';
-      ctx.beginPath();
-      ctx.arc(player.x + player.width / 2, player.y + player.height / 2, 48, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.drawImage(this.starters[state.starter], player.x, player.y + bob, player.width, player.height);
-    ctx.restore();
-
-    if (state.phase === 'running' && player.grounded) {
-      ctx.fillStyle = 'rgba(232,236,190,.4)';
-      const dustOffset = (state.elapsedMs / 30) % 24;
-      ctx.fillRect(player.x - 12 - dustOffset, WORLD.groundY - 6, 7, 4);
-    }
+    ctx.fillStyle = INK;
+    ctx.fillRect(x + 6, y, 17, 3);
+    ctx.fillRect(x + 2, y + 3, 26, 5);
+    ctx.fillRect(x, y + 8, 33, 21);
+    ctx.fillRect(x + 4, y + 29, 29, 2);
+    ctx.fillStyle = PAPER;
+    ctx.fillRect(x + 7, y + 8, 4, 4);
+    ctx.fillRect(x + 22, y + 15, 6, 3);
   }
 
-  private drawPausedShade(): void {
-    this.context.fillStyle = 'rgba(10, 18, 35, .28)';
-    this.context.fillRect(0, 0, WORLD.width, WORLD.height);
+  private drawBall(x: number, y: number): void {
+    const ctx = this.context;
+    ctx.fillStyle = INK;
+    ctx.fillRect(x + 9, y, 16, 3);
+    ctx.fillRect(x + 4, y + 3, 26, 4);
+    ctx.fillRect(x + 1, y + 7, 32, 20);
+    ctx.fillRect(x + 4, y + 27, 26, 4);
+    ctx.fillRect(x + 9, y + 31, 16, 3);
+    ctx.fillStyle = PAPER;
+    ctx.fillRect(x + 4, y + 17, 26, 9);
+    ctx.fillStyle = INK;
+    ctx.fillRect(x + 1, y + 15, 11, 4);
+    ctx.fillRect(x + 22, y + 15, 11, 4);
+    ctx.fillRect(x + 12, y + 12, 10, 10);
+    ctx.fillStyle = PAPER;
+    ctx.fillRect(x + 15, y + 15, 4, 4);
+  }
+
+  private drawGrass(x: number, y: number): void {
+    const ctx = this.context;
+    ctx.fillStyle = INK;
+    ctx.fillRect(x + 2, y + 31, 40, 7);
+    const blades = [[3, 19], [9, 8], [15, 14], [21, 1], [27, 11], [33, 5], [38, 20]];
+    blades.forEach(([bladeX, bladeY]) => {
+      ctx.fillRect(x + bladeX, y + bladeY, 4, 33 - bladeY);
+    });
+  }
+
+  private drawRestartIcon(x: number, y: number): void {
+    const ctx = this.context;
+    ctx.fillStyle = INK;
+    ctx.fillRect(x, y + 3, 3, 9);
+    ctx.fillRect(x + 3, y, 9, 3);
+    ctx.fillRect(x + 11, y + 2, 3, 3);
+    ctx.fillRect(x - 3, y + 2, 6, 3);
+    ctx.fillRect(x - 3, y, 3, 3);
   }
 }
