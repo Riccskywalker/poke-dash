@@ -1,6 +1,8 @@
-# PokéRun
+# Pika Runner
 
-PokéRun è un endless runner fan-made per browser: scegli un Pokémon, schiva gli ostacoli, raccogli bacche e carica una mossa speciale. Funziona con tastiera, touch e gamepad e conserva i record in locale.
+Un endless runner minimale per browser, ispirato all'immediatezza del Chrome Dino. Un solo Pokémon, un solo comando: salta gli ostacoli e supera il record locale.
+
+Lo sprite pixel di Pikachu è originale e costruito manualmente nel codice come blocchi su una griglia 28×23. Anche ostacoli, nuvole e terreno sono disegnati dal canvas: il gioco non carica asset grafici esterni.
 
 ## Sviluppo
 
@@ -11,22 +13,19 @@ npm ci
 npm run dev
 ```
 
-Verifiche complete:
+Verifiche:
 
 ```bash
-npm test
-npm run build
+npm run check
 npm run test:e2e
 ```
 
 ## Comandi
 
-- `Spazio` / `↑`: salto
-- `↓`: abbassati
-- `X`: mossa speciale quando la barra è piena
-- `P`: pausa
-- Gamepad: A/D-pad su per saltare, B per la mossa, D-pad giù per abbassarsi
+- `Spazio` o `↑`: inizia, salta e riprova
+- click/tap sul canvas: salta
+- pulsante `SALTA`: controllo mobile
 
 ## Note legali
 
-Progetto fan-made non commerciale e non ufficiale. Vedi [ATTRIBUTION.md](./ATTRIBUTION.md) per le attribuzioni degli asset.
+Progetto fan-made non commerciale e non ufficiale. Pokémon e i relativi personaggi appartengono ai rispettivi titolari.

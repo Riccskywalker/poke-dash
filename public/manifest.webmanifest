@@ -1,10 +1,10 @@
 {
-  "name": "PokéRun — Endless Runner",
-  "short_name": "PokéRun",
-  "description": "Un endless runner fan-made a tema Pokémon.",
+  "name": "Pika Runner",
+  "short_name": "Pika Runner",
+  "description": "Un runner pixel minimale con un solo Pokémon.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f5f0dc",
-  "theme_color": "#13213c",
+  "background_color": "#fafafa",
+  "theme_color": "#fafafa",
   "icons": []
 }

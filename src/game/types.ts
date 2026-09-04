@@ -1,7 +1,5 @@
-export type Phase = 'ready' | 'running' | 'paused' | 'gameover';
-export type StarterId = 'pikachu' | 'bulbasaur' | 'charmander' | 'squirtle';
-export type BiomeId = 'route' | 'forest' | 'cave' | 'night';
-export type EntityKind = 'diglett' | 'voltorb' | 'zubat' | 'gastly' | 'oran' | 'sitrus';
+export type Phase = 'idle' | 'running' | 'gameover';
+export type ObstacleKind = 'rock' | 'ball' | 'grass';
 
 export interface Rect {
   x: number;
@@ -13,38 +11,21 @@ export interface Rect {
 export interface Player extends Rect {
   velocityY: number;
   grounded: boolean;
-  ducking: boolean;
-  invincibleUntil: number;
 }
 
-export interface Entity extends Rect {
+export interface Obstacle extends Rect {
   id: number;
-  kind: EntityKind;
-  collected?: boolean;
+  kind: ObstacleKind;
 }
-
-export type GameEvent =
-  | { type: 'jump' }
-  | { type: 'berry'; kind: 'oran' | 'sitrus'; combo: number }
-  | { type: 'hit'; hearts: number }
-  | { type: 'special'; cleared: number }
-  | { type: 'biome'; biome: BiomeId }
-  | { type: 'gameover'; score: number };
 
 export interface GameState {
   phase: Phase;
-  starter: StarterId;
   player: Player;
-  entities: Entity[];
+  obstacles: Obstacle[];
   score: number;
-  bonusScore: number;
   distance: number;
   speed: number;
-  hearts: number;
-  berries: number;
-  combo: number;
-  energy: number;
   elapsedMs: number;
-  biome: BiomeId;
-  specialUntil: number;
 }
+
+export type GameEvent = { type: 'jump' } | { type: 'gameover'; score: number };
