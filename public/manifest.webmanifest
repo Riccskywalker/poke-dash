@@ -1,10 +1,10 @@
 {
-  "name": "Mew Runner",
-  "short_name": "Mew Runner",
-  "description": "A minimalist pixel runner starring one Pokémon.",
+  "name": "RareBit Dash",
+  "short_name": "RareBit Dash",
+  "description": "A one-button precision platformer from RareBit Arcade.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#fafafa",
-  "theme_color": "#fafafa",
-  "icons": []
+  "background_color": "#07071F",
+  "theme_color": "#0A0A2E",
+  "icons": [{"src":"/rarebit-icon.svg","sizes":"32x32","type":"image/svg+xml"}]
 }

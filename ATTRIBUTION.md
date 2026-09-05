@@ -1,5 +1,5 @@
 # Attribution
 
-Mew Runner is an unofficial, non-commercial fan project. It is not affiliated with, endorsed or sponsored by Nintendo, Game Freak or The Pokémon Company.
+The RareBit icon in `public/rarebit-icon.svg` is copied exactly from the official RareBit web asset at `rarebit/web/public/icon.svg` and is used under the project brand identity.
 
-Pokémon and Mew belong to their respective owners. The pixel sprite used by the game is an original project asset; no third-party Pokémon sprite files are bundled.
+All level geometry, rendering, particles, and interface code are original project work. No Pokémon or Geometry Dash assets are bundled.

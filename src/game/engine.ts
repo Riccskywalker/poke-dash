@@ -1,135 +1,163 @@
-import type { GameEvent, GameState, Obstacle, ObstacleKind, Rect } from './types';
+import type {
+  GameEvent,
+  GameState,
+  Obstacle,
+  ObstacleKind,
+  Rect,
+} from "./types";
 
 export const WORLD = {
-  width: 900,
-  height: 260,
-  groundY: 211,
-  gravity: 2200,
+  width: 960,
+  height: 420,
+  groundY: 338,
+  playerX: 150,
+  playerSize: 42,
+  gravity: 1900,
   jumpVelocity: -720,
-  baseSpeed: 305,
-  maxSpeed: 610,
+  padVelocity: -930,
+  speed: 330,
+  levelLength: 7200,
 } as const;
-
-const KINDS: readonly ObstacleKind[] = ['rock', 'ball', 'grass'];
-
+type Blueprint = {
+  x: number;
+  kind: ObstacleKind;
+  width: number;
+  height: number;
+};
+export const LEVEL: readonly Blueprint[] = [
+  { x: 650, kind: "spike", width: 34, height: 34 },
+  { x: 980, kind: "spike", width: 34, height: 34 },
+  { x: 1260, kind: "block", width: 44, height: 44 },
+  { x: 1610, kind: "spike", width: 34, height: 34 },
+  { x: 1648, kind: "spike", width: 34, height: 34 },
+  { x: 2050, kind: "pad", width: 58, height: 12 },
+  { x: 2500, kind: "block", width: 44, height: 54 },
+  { x: 2850, kind: "spike", width: 34, height: 34 },
+  { x: 3200, kind: "spike", width: 34, height: 34 },
+  { x: 3238, kind: "spike", width: 34, height: 34 },
+  { x: 3600, kind: "block", width: 50, height: 68 },
+  { x: 4100, kind: "pad", width: 58, height: 12 },
+  { x: 4540, kind: "spike", width: 34, height: 34 },
+  { x: 4578, kind: "spike", width: 34, height: 34 },
+  { x: 5000, kind: "block", width: 44, height: 44 },
+  { x: 5450, kind: "spike", width: 34, height: 34 },
+  { x: 5820, kind: "spike", width: 34, height: 34 },
+  { x: 6180, kind: "pad", width: 58, height: 12 },
+  { x: 6650, kind: "block", width: 48, height: 58 },
+];
 export function intersects(a: Rect, b: Rect, padding = 0): boolean {
-  return (
-    a.x + padding < b.x + b.width - padding &&
+  return a.x + padding < b.x + b.width - padding &&
     a.x + a.width - padding > b.x + padding &&
     a.y + padding < b.y + b.height - padding &&
-    a.y + a.height - padding > b.y + padding
-  );
+    a.y + a.height - padding > b.y + padding;
 }
-
-export function speedForScore(score: number): number {
-  return Math.min(WORLD.maxSpeed, WORLD.baseSpeed + score * 0.33);
-}
-
-function dimensions(kind: ObstacleKind): Pick<Rect, 'width' | 'height' | 'y'> {
-  if (kind === 'ball') return { width: 34, height: 34, y: WORLD.groundY - 34 };
-  if (kind === 'grass') return { width: 42, height: 38, y: WORLD.groundY - 38 };
-  return { width: 34, height: 31, y: WORLD.groundY - 31 };
-}
-
-export class MewRunnerEngine {
+export class RareBitDashEngine {
   public state: GameState;
-  private nextSpawnMs = 1250;
-  private nextId = 1;
   private readonly events: GameEvent[] = [];
-
-  constructor(private readonly random: () => number = Math.random) {
-    this.state = this.initialState();
+  private nextId = 1;
+  constructor() {
+    this.state = this.initialState(1);
   }
-
-  private initialState(): GameState {
+  private initialState(attempt: number): GameState {
     return {
-      phase: 'idle',
+      phase: "idle",
       player: {
-        x: 72,
-        y: WORLD.groundY - 48,
-        width: 56,
-        height: 48,
+        x: WORLD.playerX,
+        y: WORLD.groundY - WORLD.playerSize,
+        width: WORLD.playerSize,
+        height: WORLD.playerSize,
         velocityY: 0,
         grounded: true,
+        rotation: 0,
       },
       obstacles: [],
-      score: 0,
       distance: 0,
-      speed: WORLD.baseSpeed,
+      speed: WORLD.speed,
       elapsedMs: 0,
+      attempt,
+      progress: 0,
     };
   }
-
   reset(): void {
-    this.state = this.initialState();
-    this.nextSpawnMs = 1100;
+    this.state = this.initialState(this.state.attempt + 1);
     this.events.length = 0;
   }
-
   start(): void {
-    if (this.state.phase === 'idle') this.state.phase = 'running';
+    if (this.state.phase === "idle") this.state.phase = "running";
   }
-
   jump(): boolean {
-    if (this.state.phase === 'idle') this.start();
-    if (this.state.phase !== 'running' || !this.state.player.grounded) return false;
+    if (this.state.phase === "idle") this.start();
+    if (this.state.phase !== "running" || !this.state.player.grounded) {
+      return false;
+    }
     this.state.player.grounded = false;
     this.state.player.velocityY = WORLD.jumpVelocity;
-    this.events.push({ type: 'jump' });
+    this.events.push({ type: "jump" });
     return true;
   }
-
   tick(deltaSeconds: number): void {
-    if (this.state.phase !== 'running') return;
+    if (this.state.phase !== "running") return;
     const dt = Math.min(Math.max(deltaSeconds, 0), 0.05);
-    const state = this.state;
-    state.elapsedMs += dt * 1000;
-    state.distance += state.speed * dt;
-    state.score = Math.floor(state.distance / 12);
-    state.speed = speedForScore(state.score);
-
+    const s = this.state;
+    s.elapsedMs += dt * 1000;
+    s.distance += s.speed * dt;
+    s.progress = Math.min(1, s.distance / WORLD.levelLength);
     this.updatePlayer(dt);
-    state.obstacles.forEach((obstacle) => {
-      obstacle.x -= state.speed * dt;
-    });
-    state.obstacles = state.obstacles.filter((obstacle) => obstacle.x + obstacle.width > -20);
-
-    this.nextSpawnMs -= dt * 1000;
-    if (this.nextSpawnMs <= 0) this.spawn();
-
-    const hit = state.obstacles.some((obstacle) => intersects(state.player, obstacle, 6));
+    s.obstacles = LEVEL.map((item) => this.toObstacle(item)).filter((o) =>
+      o.x > -80 && o.x < WORLD.width + 80
+    );
+    const hit = s.obstacles.find((o) =>
+      o.kind !== "pad" && intersects(s.player, o, 6)
+    );
     if (hit) {
-      state.phase = 'gameover';
-      this.events.push({ type: 'gameover', score: state.score });
+      s.phase = "gameover";
+      this.events.push({ type: "gameover", attempt: s.attempt });
+      return;
+    }
+    const pad = s.obstacles.find((o) =>
+      o.kind === "pad" && intersects(s.player, o, 3)
+    );
+    if (pad && s.player.velocityY >= 0) {
+      s.player.velocityY = WORLD.padVelocity;
+      s.player.grounded = false;
+    }
+    if (s.distance >= WORLD.levelLength) {
+      s.phase = "complete";
+      s.progress = 1;
+      this.events.push({ type: "complete" });
     }
   }
-
+  private toObstacle(item: Blueprint): Obstacle {
+    return {
+      id: this.nextId++,
+      kind: item.kind,
+      worldX: item.x,
+      x: item.x - this.state.distance + WORLD.playerX,
+      y: WORLD.groundY - item.height,
+      width: item.width,
+      height: item.height,
+    };
+  }
   private updatePlayer(dt: number): void {
-    const player = this.state.player;
-    if (player.grounded) return;
-    player.velocityY += WORLD.gravity * dt;
-    player.y += player.velocityY * dt;
-    if (player.y + player.height >= WORLD.groundY) {
-      player.y = WORLD.groundY - player.height;
-      player.velocityY = 0;
-      player.grounded = true;
+    const p = this.state.player;
+    if (p.grounded) return;
+    p.velocityY += WORLD.gravity * dt;
+    p.y += p.velocityY * dt;
+    p.rotation += 270 * dt;
+    if (p.y + p.height >= WORLD.groundY) {
+      p.y = WORLD.groundY - p.height;
+      p.velocityY = 0;
+      p.grounded = true;
+      p.rotation = Math.round(p.rotation / 90) * 90;
     }
   }
-
-  private spawn(): void {
-    const kind = KINDS[Math.floor(this.random() * KINDS.length)];
-    this.injectObstacle(kind, WORLD.width + 20);
-    const difficulty = (this.state.speed - WORLD.baseSpeed) / (WORLD.maxSpeed - WORLD.baseSpeed);
-    this.nextSpawnMs = 900 + this.random() * 500 - difficulty * 260;
+  completeForTest(): void {
+    if (this.state.phase === "idle") this.start();
+    this.state.distance = WORLD.levelLength;
+    this.state.progress = 1;
+    this.state.phase = "complete";
+    this.events.push({ type: "complete" });
   }
-
-  injectObstacle(kind: ObstacleKind, x: number, y?: number): Obstacle {
-    const size = dimensions(kind);
-    const obstacle = { id: this.nextId++, kind, x, ...size, ...(y === undefined ? {} : { y }) };
-    this.state.obstacles.push(obstacle);
-    return obstacle;
-  }
-
   drainEvents(): GameEvent[] {
     return this.events.splice(0);
   }

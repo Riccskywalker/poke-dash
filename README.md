@@ -1,8 +1,6 @@
-# Mew Runner
+# RareBit Dash
 
-A minimalist browser endless runner inspired by the immediacy of Chrome Dino. One Pokémon and one control: jump over obstacles and beat your local high score.
-
-Mew's pixel sprite is an original project asset. Obstacles, clouds and terrain are also drawn directly on the canvas, so the game does not load external graphics.
+A small, original one-button precision platformer for RareBit Arcade. Guide the official RareBit gem through one finite, deterministic level of spikes, blocks and jump pads. It takes structural inspiration from auto-scrolling platform games without using Pokémon, Geometry Dash artwork, or third-party assets.
 
 ## Development
 
@@ -13,19 +11,12 @@ npm ci
 npm run dev
 ```
 
-Run all checks:
-
-```bash
-npm run check
-npm run test:e2e
-```
+Run checks with `npm run check` and `npm run test:e2e`.
 
 ## Controls
 
-- `Space` or `↑`: start, jump and retry
-- Click or tap the canvas: jump
-- `JUMP` button: mobile control
+- `Space` or `ArrowUp`: start, jump and retry
+- Click or tap the game canvas
+- On mobile, use the `JUMP` button
 
-## Legal notice
-
-This is an unofficial, non-commercial fan project. Pokémon and its characters belong to their respective owners.
+The level is deterministic and ends at 100%. The RareBit icon SVG in `public/rarebit-icon.svg` is the official project mark.
