@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
+    "build:e2e": "VITE_E2E=true npm run build",
+    "test:e2e": "npm run build:e2e && playwright test",
     "check": "npm run test && npm run build"
   },
   "devDependencies": {
