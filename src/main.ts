@@ -1,66 +1,114 @@
 import "./style.css";
-import { RareBitDashEngine } from "./game/engine";
+import { RareBitDashEngine, WORLD } from "./game/engine";
 import { GameRenderer } from "./game/renderer";
+import { GameAudio } from "./game/audio";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-  <main class="page">
-    <header class="intro"><img src="/rarebit-icon.svg" alt="RareBit" class="brand-icon"><div><p class="eyebrow">RAREBIT ARCADE</p><h1>RareBit Dash</h1><p>One level. One button. Guide the RareBit gem across a geometric world inspired by precision platformers.</p></div></header>
-    <section class="game-section" aria-labelledby="game-title"><h2 id="game-title" class="visually-hidden">RareBit Dash</h2><div class="canvas-wrap"><canvas id="game-canvas" data-testid="game-canvas" data-phase="idle" data-player-state="grounded" data-jumps="0" width="960" height="420" aria-label="RareBit Dash: press space, arrow up, or tap to jump"></canvas></div><button id="jump-button" type="button" aria-label="Jump">↑ JUMP</button><p id="game-status" class="status" role="status" aria-live="polite">Press space or tap to start.</p></section>
-    <section class="how-to"><h2>How to play</h2><p>Auto-scroll through the level. Jump over lime spikes and blocks. Land on pale jump pads for extra height.</p></section>
-    <footer><p>Built for RareBit. Original project assets only.</p><a href="https://github.com/Riccskywalker/poke-dash">Source code</a></footer>
+  <main class="game-shell">
+    <canvas id="game-canvas" data-testid="game-canvas" data-phase="idle" data-player-state="grounded" data-jumps="0" aria-label="RareBit Dash game"></canvas>
+    <button id="jump-button" type="button" aria-label="Jump"></button>
+    <button id="mute-button" type="button" aria-label="Toggle sound" aria-pressed="false">◖</button>
+    <p id="game-status" class="visually-hidden" role="status" aria-live="polite"></p>
   </main>`;
 
 const canvas = document.querySelector<HTMLCanvasElement>("#game-canvas")!;
 const engine = new RareBitDashEngine();
 const renderer = new GameRenderer(canvas);
+const audio = new GameAudio();
 const status = document.querySelector<HTMLParagraphElement>("#game-status")!;
-const button = document.querySelector<HTMLButtonElement>("#jump-button")!;
-let last = performance.now();
+const jumpButton = document.querySelector<HTMLButtonElement>("#jump-button")!;
+const muteButton = document.querySelector<HTMLButtonElement>("#mute-button")!;
+const logicalWidth = () => innerWidth < innerHeight ? 480 : 960;
+let last = performance.now(); let accumulator = 0; let paused = false; let lastSteps = 0; let loopErrorLogged = false;
+let pressed = false; let startedIdle = false; let holdTimer = 0;
 
+function resize(): void {
+  const width = logicalWidth(); const height = Math.max(320, Math.round(width * innerHeight / innerWidth));
+  canvas.width = Math.round(innerWidth * Math.min(devicePixelRatio, 2)); canvas.height = Math.round(innerHeight * Math.min(devicePixelRatio, 2));
+  canvas.style.width = `${innerWidth}px`; canvas.style.height = `${innerHeight}px`; renderer.resize(width, height); canvas.dataset.playerCssSize = String(renderer.camera.playerCssSize); canvas.dataset.cameraHeight = String(height); canvas.dataset.dpr = String(renderer.camera.dpr);
+}
 function action(): void {
+  audio.gesture();
+  if (engine.state.phase === "paused") engine.resume();
+  paused = false;
   if (engine.state.phase === "gameover" || engine.state.phase === "complete") {
     engine.reset();
-    status.textContent = "New attempt.";
+    renderer.setReverseHolo(false);
+    clearTimeout(holdTimer);
+    pressed = false;
+    startedIdle = false;
   }
-  if (engine.jump()) {
-    canvas.dataset.jumps = String(Number(canvas.dataset.jumps || 0) + 1);
-    status.textContent = "Keep moving.";
-  }
+  if (engine.requestJump()) canvas.dataset.jumps = String(Number(canvas.dataset.jumps ?? 0) + 1);
   last = performance.now();
 }
-function frame(now: number): void {
-  engine.tick((now - last) / 1000);
-  last = now;
-  for (const event of engine.drainEvents()) {
-    if (event.type === "gameover") {
-      status.textContent = "Crashed. Try the level again.";
+
+function beginPress(): void {
+  if (pressed) return;
+  pressed = true;
+  startedIdle = engine.state.phase === "idle";
+  action();
+  clearTimeout(holdTimer);
+  holdTimer = window.setTimeout(() => {
+    if (pressed && startedIdle && engine.state.phase === "running") {
+      renderer.setReverseHolo(true);
     }
-    if (event.type === "complete") {
-      status.textContent = "Level complete. Excellent run.";
-    }
-  }
-  renderer.draw(engine.state);
-  canvas.dataset.phase = engine.state.phase;
-  canvas.dataset.playerState = engine.state.player.grounded
-    ? "grounded"
-    : "jumping";
-  button.textContent =
-    engine.state.phase === "gameover" || engine.state.phase === "complete"
-      ? "↻ RETRY"
-      : "↑ JUMP";
-  requestAnimationFrame(frame);
+  }, 1500);
 }
+
+function endPress(): void {
+  pressed = false;
+  clearTimeout(holdTimer);
+}
+function frame(now: number): void {
+  try { const gap = now - last; last = now; if (gap > 250) { engine.pause(); accumulator = 0; paused = true; } if (!paused) { accumulator += Math.min(gap, 80) / 1000; let steps = 0; while (accumulator >= 1 / 120 && steps < 8) { engine.tick(1 / 120); accumulator -= 1 / 120; steps += 1; } lastSteps = steps; }
+  for (const event of engine.drainEvents()) { renderer.handleEvent(event, now); if (event.type === "jump") audio.jump(); if (event.type === "pad") audio.pad(); if (event.type === "gameover") { audio.crash(); navigator.vibrate?.(40); status.textContent = "Crashed"; } if (event.type === "complete") { audio.complete(); navigator.vibrate?.([20, 40, 20]); status.textContent = "Complete"; } }
+  renderer.draw(engine.state, now); canvas.dataset.phase = engine.state.phase; canvas.dataset.playerState = engine.state.player.grounded ? "grounded" : "jumping"; requestAnimationFrame(frame);
+  } catch (error) { if (!loopErrorLogged) { console.error(error); loopErrorLogged = true; } engine.pause(); paused = true; accumulator = 0; requestAnimationFrame(frame); }
+}
+const jumpKeys = new Set(["Space", "ArrowUp", "KeyW", "Enter"]);
 window.addEventListener("keydown", (event) => {
-  if ((event.code === "Space" || event.code === "ArrowUp") && !event.repeat) {
+  if (jumpKeys.has(event.code) && !event.repeat) {
     event.preventDefault();
-    action();
+    beginPress();
   }
 });
-canvas.addEventListener("pointerdown", action);
-button.addEventListener("pointerdown", action);
-if (import.meta.env.DEV) {
-  (window as Window & { __RAREBIT_TEST_COMPLETE__?: () => void })
-    .__RAREBIT_TEST_COMPLETE__ = () => engine.completeForTest();
-}
-renderer.draw(engine.state);
-requestAnimationFrame(frame);
+window.addEventListener("keyup", (event) => {
+  if (jumpKeys.has(event.code)) endPress();
+});
+jumpButton.addEventListener("pointerdown", (event) => {
+  const primaryMouse = event.pointerType === "mouse" && event.button === 0;
+  const touchOrPen = event.pointerType === "touch" || event.pointerType === "pen";
+  if (!event.isPrimary || (!primaryMouse && !touchOrPen)) return;
+  event.preventDefault();
+  beginPress();
+});
+jumpButton.addEventListener("pointerup", endPress);
+jumpButton.addEventListener("pointercancel", endPress);
+window.addEventListener("blur", () => { paused = true; accumulator = 0; engine.pause(); }); document.addEventListener("visibilitychange", () => { paused = document.hidden; accumulator = 0; if (document.hidden) engine.pause(); });
+window.addEventListener("resize", resize); window.visualViewport?.addEventListener("resize", resize); window.addEventListener("orientationchange", resize); new ResizeObserver(resize).observe(document.documentElement);
+const motionQuery = matchMedia("(prefers-reduced-motion: reduce)");
+renderer.setReducedMotion(motionQuery.matches);
+motionQuery.addEventListener("change", (event) => renderer.setReducedMotion(event.matches));
+muteButton.setAttribute("aria-pressed", String(audio.isMuted)); muteButton.classList.toggle("muted", audio.isMuted); muteButton.textContent = "";
+muteButton.addEventListener("click", () => { audio.gesture(); audio.setMuted(!audio.isMuted); muteButton.setAttribute("aria-pressed", String(audio.isMuted)); muteButton.classList.toggle("muted", audio.isMuted); });
+if (import.meta.env.DEV || import.meta.env.VITE_E2E === "true") (window as Window & { __RAREBIT_TEST__?: unknown }).__RAREBIT_TEST__ = {
+  snapshot: () => ({
+    phase: engine.state.phase,
+    player: engine.state.player,
+    camera: renderer.camera,
+    world: { groundY: WORLD.groundY, speed: WORLD.speed },
+    reducedMotion: renderer.reducedMotion,
+    reverseHolo: renderer.reverseHolo,
+    renderRotation: renderer.reducedMotion ? 0 : engine.state.player.rotation,
+    trailEnabled: !renderer.reducedMotion,
+    parallaxEnabled: !renderer.reducedMotion,
+    animationState: { nowMs: performance.now(), crashAt: engine.state.phase === "gameover" },
+    muted: audio.isMuted,
+    audioInitialized: audio.initialized,
+    lastSteps,
+  }),
+  setDistance: (distance: number) => engine.setDistanceForTest(distance),
+  press: beginPress,
+  release: endPress,
+};
+resize(); renderer.draw(engine.state); requestAnimationFrame(frame);

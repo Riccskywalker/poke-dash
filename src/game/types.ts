@@ -1,4 +1,4 @@
-export type Phase = "idle" | "running" | "gameover" | "complete";
+export type Phase = "idle" | "running" | "paused" | "gameover" | "complete";
 export type ObstacleKind = "spike" | "block" | "pad";
 export interface Rect {
   x: number;
@@ -10,6 +10,7 @@ export interface Player extends Rect {
   velocityY: number;
   grounded: boolean;
   rotation: number;
+  supportingSlabId?: number;
 }
 export interface Obstacle extends Rect {
   id: number;
@@ -28,5 +29,6 @@ export interface GameState {
 }
 export type GameEvent =
   | { type: "jump" }
+  | { type: "pad" }
   | { type: "gameover"; attempt: number }
   | { type: "complete" };

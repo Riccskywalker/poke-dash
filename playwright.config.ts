@@ -10,12 +10,15 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile', use: { ...devices['Pixel 7'] } },
+    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
+    { name: 'pixel-portrait', use: { ...devices['Pixel 7'] } },
+    { name: 'pixel-landscape', use: { ...devices['Pixel 7'], viewport: { width: 915, height: 412 } } },
+    { name: 'iphone-portrait', use: { ...devices['iPhone 13'], browserName: 'chromium' } },
+    { name: 'iphone-landscape', use: { ...devices['iPhone 13'], browserName: 'chromium', viewport: { width: 844, height: 390 } } },
   ],
   webServer: {
-    command: 'npm run dev -- --host 127.0.0.1 --port 4173',
+    command: 'npm run preview -- --host 127.0.0.1 --port 4173',
     url: 'http://127.0.0.1:4173',
-    reuseExistingServer: true,
+    reuseExistingServer: false,
   },
 });
