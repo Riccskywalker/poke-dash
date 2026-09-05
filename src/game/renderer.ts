@@ -1,139 +1,119 @@
-import { WORLD } from './engine';
-import { drawPixelMew } from './sprite';
-import type { GameState, Obstacle } from './types';
-
-const INK = '#535353';
-const LIGHT = '#d5d5d5';
-const PAPER = '#fafafa';
-
+import { WORLD } from "./engine";
+import { drawRareBitIcon } from "./sprite";
+import type { GameState, Obstacle } from "./types";
 export class GameRenderer {
-  private readonly context: CanvasRenderingContext2D;
-
+  private readonly ctx: CanvasRenderingContext2D;
   constructor(canvas: HTMLCanvasElement) {
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error('Canvas 2D non supportato');
-    context.imageSmoothingEnabled = false;
-    this.context = context;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas 2D unavailable");
+    this.ctx = ctx;
   }
-
-  draw(state: GameState, highScore: number): void {
-    const ctx = this.context;
-    ctx.fillStyle = PAPER;
-    ctx.fillRect(0, 0, WORLD.width, WORLD.height);
-    this.drawClouds(state.distance);
-    this.drawGround(state.distance);
-    state.obstacles.forEach((obstacle) => this.drawObstacle(obstacle));
-
-    const runFrame = state.player.grounded && state.phase === 'running' ? Math.floor(state.elapsedMs / 115) % 2 : 0;
-    const idleBob = state.phase === 'idle' ? Math.sin(state.elapsedMs / 250) * 1 : 0;
-    drawPixelMew(ctx, state.player.x, state.player.y + idleBob, runFrame, 2);
-
-    this.drawScore(state.score, highScore);
-    if (state.phase === 'idle') this.centerText('PRESS SPACE TO PLAY', 116, 13);
-    if (state.phase === 'gameover') {
-      this.centerText('GAME OVER', 91, 19);
-      this.centerText('SPACE TO RETRY', 119, 12);
-      this.drawRestartIcon(WORLD.width / 2 + 71, 81);
+  draw(state: GameState): void {
+    const c = this.ctx;
+    c.clearRect(0, 0, WORLD.width, WORLD.height);
+    c.fillStyle = "#0A0A2E";
+    c.fillRect(0, 0, WORLD.width, WORLD.height);
+    c.fillStyle = "#101044";
+    c.fillRect(0, 0, WORLD.width, WORLD.groundY);
+    for (
+      let x = -40 - (state.distance % 120);
+      x < WORLD.width + 100;
+      x += 120
+    ) {
+      c.strokeStyle = "#19195a";
+      c.lineWidth = 2;
+      c.beginPath();
+      c.moveTo(x, 50);
+      c.lineTo(x + 70, 0);
+      c.stroke();
+      c.beginPath();
+      c.moveTo(x, 250);
+      c.lineTo(x + 130, 130);
+      c.stroke();
+    }
+    c.fillStyle = "#C8F04B";
+    c.fillRect(0, WORLD.groundY, WORLD.width, 5);
+    c.fillStyle = "#222261";
+    c.fillRect(0, WORLD.groundY + 5, WORLD.width, WORLD.height - WORLD.groundY);
+    state.obstacles.forEach((o) => this.drawObstacle(o));
+    c.fillStyle = "#89AC2C";
+    for (let i = 1; i <= 4; i += 1) {
+      c.globalAlpha = .12 * (5 - i);
+      c.fillRect(
+        state.player.x - i * 11,
+        state.player.y + state.player.height - 7,
+        5,
+        5,
+      );
+    }
+    c.globalAlpha = 1;
+    drawRareBitIcon(
+      c,
+      state.player.x,
+      state.player.y,
+      state.player.width,
+      state.player.rotation,
+    );
+    this.drawHud(state);
+    if (state.phase === "idle") this.overlay("READY?", "SPACE / TAP TO START");
+    if (state.phase === "gameover") {
+      this.overlay("CRASHED", "SPACE / TAP TO RETRY");
+    }
+    if (state.phase === "complete") {
+      this.overlay("LEVEL COMPLETE", "SPACE / TAP TO RUN AGAIN");
     }
   }
-
-  private drawScore(score: number, highScore: number): void {
-    const ctx = this.context;
-    ctx.fillStyle = INK;
-    ctx.font = 'bold 14px "Courier New", monospace';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'top';
-    ctx.fillText(`HI ${String(highScore).padStart(5, '0')}  ${String(score).padStart(5, '0')}`, WORLD.width - 13, 13);
-  }
-
-  private centerText(text: string, y: number, size: number): void {
-    const ctx = this.context;
-    ctx.fillStyle = INK;
-    ctx.font = `bold ${size}px "Courier New", monospace`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText(text, WORLD.width / 2, y);
-  }
-
-  private drawClouds(distance: number): void {
-    const ctx = this.context;
-    const offset = -((distance * 0.12) % 330);
-    ctx.fillStyle = LIGHT;
-    for (let index = -1; index < 4; index += 1) {
-      const x = offset + index * 330 + 180;
-      const y = 45 + (index % 2) * 27;
-      ctx.fillRect(x, y + 5, 42, 3);
-      ctx.fillRect(x + 8, y, 15, 3);
-      ctx.fillRect(x + 25, y + 2, 11, 3);
-      ctx.fillRect(x + 3, y + 8, 52, 2);
+  private drawObstacle(o: Obstacle): void {
+    const c = this.ctx;
+    if (o.kind === "spike") {
+      c.fillStyle = "#C8F04B";
+      c.beginPath();
+      c.moveTo(o.x, o.y + o.height);
+      c.lineTo(o.x + o.width / 2, o.y);
+      c.lineTo(o.x + o.width, o.y + o.height);
+      c.closePath();
+      c.fill();
+    } else if (o.kind === "pad") {
+      c.fillStyle = "#EAFCA0";
+      c.fillRect(o.x, o.y, o.width, o.height);
+      c.fillStyle = "#89AC2C";
+      c.fillRect(o.x + 8, o.y + 4, o.width - 16, 3);
+    } else {
+      c.fillStyle = "#C8F04B";
+      c.fillRect(o.x, o.y, o.width, o.height);
+      c.fillStyle = "#0A0A2E";
+      c.fillRect(o.x + 8, o.y + 8, o.width - 16, 5);
+      c.fillRect(o.x + 8, o.y + 8, 5, o.height - 16);
     }
   }
-
-  private drawGround(distance: number): void {
-    const ctx = this.context;
-    ctx.fillStyle = INK;
-    ctx.fillRect(0, WORLD.groundY, WORLD.width, 2);
-    const offset = -(distance % 90);
-    for (let x = offset - 90; x < WORLD.width + 90; x += 90) {
-      ctx.fillRect(x + 14, WORLD.groundY + 10, 20, 2);
-      ctx.fillRect(x + 51, WORLD.groundY + 22, 8, 2);
-      ctx.fillRect(x + 70, WORLD.groundY + 14, 3, 2);
-    }
+  private drawHud(s: GameState): void {
+    const c = this.ctx;
+    c.fillStyle = "#EAFCA0";
+    c.font = "700 16px system-ui";
+    c.textAlign = "left";
+    c.fillText(`ATTEMPT ${s.attempt}`, 24, 30);
+    c.textAlign = "right";
+    c.fillText(`${Math.round(s.progress * 100)}%`, WORLD.width - 24, 30);
+    c.fillStyle = "#272765";
+    c.fillRect(24, 43, WORLD.width - 48, 7);
+    c.fillStyle = "#C8F04B";
+    c.fillRect(24, 43, (WORLD.width - 48) * s.progress, 7);
   }
-
-  private drawObstacle(obstacle: Obstacle): void {
-    if (obstacle.kind === 'ball') this.drawBall(obstacle.x, obstacle.y);
-    else if (obstacle.kind === 'grass') this.drawGrass(obstacle.x, obstacle.y);
-    else this.drawRock(obstacle.x, obstacle.y);
-  }
-
-  private drawRock(x: number, y: number): void {
-    const ctx = this.context;
-    ctx.fillStyle = INK;
-    ctx.fillRect(x + 6, y, 17, 3);
-    ctx.fillRect(x + 2, y + 3, 26, 5);
-    ctx.fillRect(x, y + 8, 33, 21);
-    ctx.fillRect(x + 4, y + 29, 29, 2);
-    ctx.fillStyle = PAPER;
-    ctx.fillRect(x + 7, y + 8, 4, 4);
-    ctx.fillRect(x + 22, y + 15, 6, 3);
-  }
-
-  private drawBall(x: number, y: number): void {
-    const ctx = this.context;
-    ctx.fillStyle = INK;
-    ctx.fillRect(x + 9, y, 16, 3);
-    ctx.fillRect(x + 4, y + 3, 26, 4);
-    ctx.fillRect(x + 1, y + 7, 32, 20);
-    ctx.fillRect(x + 4, y + 27, 26, 4);
-    ctx.fillRect(x + 9, y + 31, 16, 3);
-    ctx.fillStyle = PAPER;
-    ctx.fillRect(x + 4, y + 17, 26, 9);
-    ctx.fillStyle = INK;
-    ctx.fillRect(x + 1, y + 15, 11, 4);
-    ctx.fillRect(x + 22, y + 15, 11, 4);
-    ctx.fillRect(x + 12, y + 12, 10, 10);
-    ctx.fillStyle = PAPER;
-    ctx.fillRect(x + 15, y + 15, 4, 4);
-  }
-
-  private drawGrass(x: number, y: number): void {
-    const ctx = this.context;
-    ctx.fillStyle = INK;
-    ctx.fillRect(x + 2, y + 31, 40, 7);
-    const blades = [[3, 19], [9, 8], [15, 14], [21, 1], [27, 11], [33, 5], [38, 20]];
-    blades.forEach(([bladeX, bladeY]) => {
-      ctx.fillRect(x + bladeX, y + bladeY, 4, 33 - bladeY);
-    });
-  }
-
-  private drawRestartIcon(x: number, y: number): void {
-    const ctx = this.context;
-    ctx.fillStyle = INK;
-    ctx.fillRect(x, y + 3, 3, 9);
-    ctx.fillRect(x + 3, y, 9, 3);
-    ctx.fillRect(x + 11, y + 2, 3, 3);
-    ctx.fillRect(x - 3, y + 2, 6, 3);
-    ctx.fillRect(x - 3, y, 3, 3);
+  private overlay(title: string, subtitle: string): void {
+    const c = this.ctx;
+    c.fillStyle = "rgba(10,10,46,.32)";
+    c.fillRect(0, 0, WORLD.width, WORLD.height);
+    c.fillStyle = "#0A0A2E";
+    c.fillRect(280, 145, 400, 100);
+    c.strokeStyle = "#C8F04B";
+    c.lineWidth = 2;
+    c.strokeRect(280, 145, 400, 100);
+    c.fillStyle = "#EAFCA0";
+    c.textAlign = "center";
+    c.font = "800 34px system-ui";
+    c.fillText(title, WORLD.width / 2, 188);
+    c.fillStyle = "#C8F04B";
+    c.font = "700 14px system-ui";
+    c.fillText(subtitle, WORLD.width / 2, 220);
   }
 }

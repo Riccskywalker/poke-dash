@@ -1,148 +1,66 @@
-import './style.css';
-import { MewRunnerEngine } from './game/engine';
-import { GameRenderer } from './game/renderer';
-import { drawPixelMew } from './game/sprite';
+import "./style.css";
+import { RareBitDashEngine } from "./game/engine";
+import { GameRenderer } from "./game/renderer";
 
-interface RunRecord {
-  score: number;
-  date: string;
-}
-
-const STORAGE_KEY = 'mew-runner-records-v1';
-
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
+document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <main class="page">
-    <header class="intro">
-      <div class="sprite-preview" aria-hidden="true">
-        <canvas id="sprite-preview" width="92" height="92"></canvas>
-      </div>
-      <div>
-        <h1>Mew Runner</h1>
-        <p>
-          Mew, one endless road. Press <strong>space</strong> or tap the game to jump.
-          Dodge rocks, tall grass and Poké Balls. Beat your high score.
-        </p>
-      </div>
-    </header>
+    <header class="intro"><img src="/rarebit-icon.svg" alt="RareBit" class="brand-icon"><div><p class="eyebrow">RAREBIT ARCADE</p><h1>RareBit Dash</h1><p>One level. One button. Guide the RareBit gem across a geometric world inspired by precision platformers.</p></div></header>
+    <section class="game-section" aria-labelledby="game-title"><h2 id="game-title" class="visually-hidden">RareBit Dash</h2><div class="canvas-wrap"><canvas id="game-canvas" data-testid="game-canvas" data-phase="idle" data-player-state="grounded" data-jumps="0" width="960" height="420" aria-label="RareBit Dash: press space, arrow up, or tap to jump"></canvas></div><button id="jump-button" type="button" aria-label="Jump">↑ JUMP</button><p id="game-status" class="status" role="status" aria-live="polite">Press space or tap to start.</p></section>
+    <section class="how-to"><h2>How to play</h2><p>Auto-scroll through the level. Jump over lime spikes and blocks. Land on pale jump pads for extra height.</p></section>
+    <footer><p>Built for RareBit. Original project assets only.</p><a href="https://github.com/Riccskywalker/poke-dash">Source code</a></footer>
+  </main>`;
 
-    <section class="game-section" aria-labelledby="game-title">
-      <h2 id="game-title" class="visually-hidden">Mew Runner game</h2>
-      <canvas
-        id="game-canvas"
-        data-testid="game-canvas"
-        data-phase="idle"
-        data-player-state="grounded"
-        data-jumps="0"
-        width="900"
-        height="260"
-        aria-label="Mew Runner: press space or tap to jump"
-      ></canvas>
-      <button id="jump-button" class="jump-button" type="button" aria-label="Jump">
-        <span>↑</span> JUMP
-      </button>
-      <p id="game-status" class="status" role="status" aria-live="polite">Press space to start.</p>
-    </section>
-
-    <section class="scores" aria-labelledby="scores-title">
-      <h2 id="scores-title">Best runs</h2>
-      <ol id="score-list"></ol>
-    </section>
-
-    <footer>
-      <p>Unofficial fan game. Pokémon belongs to its respective owners.</p>
-      <a href="https://github.com/Riccskywalker/poke-dash">Source code</a>
-    </footer>
-  </main>
-`;
-
-const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
+const canvas = document.querySelector<HTMLCanvasElement>("#game-canvas")!;
+const engine = new RareBitDashEngine();
 const renderer = new GameRenderer(canvas);
-const engine = new MewRunnerEngine();
-const status = document.querySelector<HTMLParagraphElement>('#game-status')!;
-const jumpButton = document.querySelector<HTMLButtonElement>('#jump-button')!;
-let lastFrame = performance.now();
+const status = document.querySelector<HTMLParagraphElement>("#game-status")!;
+const button = document.querySelector<HTMLButtonElement>("#jump-button")!;
+let last = performance.now();
 
-function records(): RunRecord[] {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]') as RunRecord[];
-  } catch {
-    return [];
-  }
-}
-
-function highScore(): number {
-  return records()[0]?.score ?? 0;
-}
-
-function saveScore(score: number): void {
-  const next = [...records(), { score, date: new Date().toISOString() }]
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  renderRecords();
-}
-
-function renderRecords(): void {
-  const list = document.querySelector<HTMLOListElement>('#score-list')!;
-  const entries = records();
-  if (entries.length === 0) {
-    list.innerHTML = '<li><span>1</span><strong>No runs yet</strong><b>00000</b></li>';
-    return;
-  }
-  list.innerHTML = entries
-    .map((entry, index) => `<li><span>${index + 1}</span><strong>Run ${index + 1}</strong><b>${String(entry.score).padStart(5, '0')}</b></li>`)
-    .join('');
-}
-
-function jump(): void {
-  if (engine.state.phase === 'gameover') {
+function action(): void {
+  if (engine.state.phase === "gameover" || engine.state.phase === "complete") {
     engine.reset();
-    status.textContent = 'New run.';
+    status.textContent = "New attempt.";
   }
   if (engine.jump()) {
-    canvas.dataset.jumps = String(Number(canvas.dataset.jumps ?? 0) + 1);
-    canvas.dataset.playerState = 'jumping';
-    status.textContent = 'Mew is running.';
+    canvas.dataset.jumps = String(Number(canvas.dataset.jumps || 0) + 1);
+    status.textContent = "Keep moving.";
   }
-  lastFrame = performance.now();
+  last = performance.now();
 }
-
-function loop(now: number): void {
-  engine.tick((now - lastFrame) / 1000);
-  lastFrame = now;
-
+function frame(now: number): void {
+  engine.tick((now - last) / 1000);
+  last = now;
   for (const event of engine.drainEvents()) {
-    if (event.type === 'gameover') {
-      saveScore(event.score);
-      status.textContent = `Game over. ${event.score} points.`;
+    if (event.type === "gameover") {
+      status.textContent = "Crashed. Try the level again.";
+    }
+    if (event.type === "complete") {
+      status.textContent = "Level complete. Excellent run.";
     }
   }
-
-  renderer.draw(engine.state, highScore());
+  renderer.draw(engine.state);
   canvas.dataset.phase = engine.state.phase;
-  canvas.dataset.playerState = engine.state.player.grounded ? 'grounded' : 'jumping';
-  jumpButton.textContent = engine.state.phase === 'gameover' ? '↻ RETRY' : '↑ JUMP';
-  requestAnimationFrame(loop);
+  canvas.dataset.playerState = engine.state.player.grounded
+    ? "grounded"
+    : "jumping";
+  button.textContent =
+    engine.state.phase === "gameover" || engine.state.phase === "complete"
+      ? "↻ RETRY"
+      : "↑ JUMP";
+  requestAnimationFrame(frame);
 }
-
-window.addEventListener('keydown', (event) => {
-  if ((event.code === 'Space' || event.code === 'ArrowUp') && !event.repeat) {
+window.addEventListener("keydown", (event) => {
+  if ((event.code === "Space" || event.code === "ArrowUp") && !event.repeat) {
     event.preventDefault();
-    jump();
+    action();
   }
 });
-
-canvas.addEventListener('pointerdown', jump);
-jumpButton.addEventListener('pointerdown', jump);
-
-const preview = document.querySelector<HTMLCanvasElement>('#sprite-preview')!;
-const previewContext = preview.getContext('2d')!;
-previewContext.fillStyle = '#fafafa';
-previewContext.fillRect(0, 0, preview.width, preview.height);
-previewContext.fillStyle = '#535353';
-previewContext.fillRect(0, 70, preview.width, 2);
-drawPixelMew(previewContext, 17, 21, 0, 2);
-
-renderRecords();
-renderer.draw(engine.state, highScore());
-requestAnimationFrame(loop);
+canvas.addEventListener("pointerdown", action);
+button.addEventListener("pointerdown", action);
+if (import.meta.env.DEV) {
+  (window as Window & { __RAREBIT_TEST_COMPLETE__?: () => void })
+    .__RAREBIT_TEST_COMPLETE__ = () => engine.completeForTest();
+}
+renderer.draw(engine.state);
+requestAnimationFrame(frame);
